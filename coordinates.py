@@ -5,19 +5,18 @@ from dataclasses import dataclass
 
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BOARD)
-GPIO.setwarnings(False)
 #Niko test commit
 
 # Assume all floats are in mm/radians
 from typing import Iterable, Tuple, List
 
 # Bounds for radius, in mm
-RADIUS_MIN = 5f
-RADIUS_MAX = 500f
+RADIUS_MIN = 5
+RADIUS_MAX = 500
 
 # Steps required to traverse bounds
-STEPS_FOR_FULL_ROTATION = 600
-STEPS_FOR_FULL_EXTENSION = 100
+STEPS_FOR_FULL_ROTATION = 1000
+STEPS_FOR_FULL_EXTENSION = 500
 
 # Deltas computed based on above values
 STEP_DELTA_RADIUS = (RADIUS_MAX - RADIUS_MIN) / STEPS_FOR_FULL_EXTENSION
@@ -258,7 +257,7 @@ def main():
     spinner = StepperState(STEPPER1_PINS)
     slider = StepperState(STEPPER2_PINS)
 
-    for i in range(50):
+    for i in range(200):
         spinner.step_forward()
         tick()
 
