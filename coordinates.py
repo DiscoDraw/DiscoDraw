@@ -3,6 +3,9 @@ import math
 import time
 from dataclasses import dataclass
 
+import RPi.GPIO as GPIO
+
+"""
 class GPIO:
     HIGH = 0
     LOW = 0
@@ -13,6 +16,7 @@ class GPIO:
     @classmethod
     def output(cls, pin, val):
         pass
+"""
 
 
 # Assume all floats are in mm/radians
@@ -261,6 +265,13 @@ def main():
     spinner = StepperState(STEPPER1_PINS)
     slider = StepperState(STEPPER2_PINS)
 
+    for i in range(50):
+        spinner.step_forward()
+        tick()
+
+
+    return
+
     # Spin backwards till we hit root
     while not "LIMIT_SWITCH":
         slider.step_forward()
@@ -288,4 +299,13 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        pass
+    finally:
+        GPIO.output(STEPPER1_PINS["en1"], GPIO.LOW)
+        GPIO.output(STEPPER1_PINS["en2"], GPIO.LOW)
+        GPIO.output(STEPPER2_PINS["en1"], GPIO.LOW)
+        GPIO.output(STEPPER2_PINS["en2"], GPIO.LOW)
+    raise e
