@@ -24,12 +24,12 @@ class GPIO:
 from typing import Iterable, Tuple, List
 
 # Bounds for radius, in mm
-RADIUS_MIN = 5
-RADIUS_MAX = 500
+RADIUS_MIN = 5f
+RADIUS_MAX = 500f
 
 # Steps required to traverse bounds
-STEPS_FOR_FULL_ROTATION = 1000
-STEPS_FOR_FULL_EXTENSION = 500f
+STEPS_FOR_FULL_ROTATION = 600
+STEPS_FOR_FULL_EXTENSION = 100
 
 # Deltas computed based on above values
 STEP_DELTA_RADIUS = (RADIUS_MAX - RADIUS_MIN) / STEPS_FOR_FULL_EXTENSION
