@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BOARD)
+GPIO.setwarnings(False)
 #Niko test commit
 """
 class GPIO:
