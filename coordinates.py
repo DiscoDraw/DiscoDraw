@@ -259,6 +259,10 @@ STEPPER2_PINS = {"en1": 19, "en2": 32, "c1": 21, "c2": 23, "c3": 24, "c4": 26}
 DEFAULT_START_POS = Cartesian(RADIUS_MIN, 0).polar
 
 
+def failfast():
+    raise Exception("Abort")
+
+
 # The main runtime
 def main():
     # Create motorstates using the gpio
@@ -270,7 +274,8 @@ def main():
         tick()
 
 
-    return
+    failfast()
+
 
     # Spin backwards till we hit root
     while not "LIMIT_SWITCH":
