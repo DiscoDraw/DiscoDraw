@@ -305,9 +305,11 @@ def main():
 
 
 if __name__ == '__main__':
+    err = None
     try:
         main()
     except Exception as e:
+        err = e
         pass
     finally:
         GPIO.setup(STEPPER1_PINS["en1"], GPIO.OUT)
@@ -321,4 +323,4 @@ if __name__ == '__main__':
 
         GPIO.setup(STEPPER2_PINS["en2"], GPIO.OUT)
         GPIO.output(STEPPER2_PINS["en2"], GPIO.LOW)
-    raise e
+    raise err
