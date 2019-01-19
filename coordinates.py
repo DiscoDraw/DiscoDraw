@@ -29,7 +29,7 @@ RADIUS_MAX = 500
 
 # Steps required to traverse bounds
 STEPS_FOR_FULL_ROTATION = 1000
-STEPS_FOR_FULL_EXTENSION = 500f
+STEPS_FOR_FULL_EXTENSION = 500
 
 # Deltas computed based on above values
 STEP_DELTA_RADIUS = (RADIUS_MAX - RADIUS_MIN) / STEPS_FOR_FULL_EXTENSION
@@ -270,7 +270,7 @@ def main():
     spinner = StepperState(STEPPER1_PINS)
     slider = StepperState(STEPPER2_PINS)
 
-    for i in range(50):
+    for i in range(200):
         spinner.step_forward()
         tick()
 
