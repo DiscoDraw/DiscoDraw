@@ -7,19 +7,6 @@ import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
 #Niko test commit
-"""
-class GPIO:
-    HIGH = 0
-    LOW = 0
-    OUT = 0
-    @classmethod
-    def setup(cls, pin, mode):
-        pass
-    @classmethod
-    def output(cls, pin, val):
-        pass
-"""
-
 
 # Assume all floats are in mm/radians
 from typing import Iterable, Tuple, List
