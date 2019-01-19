@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass
 
 import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BOARD)
 
 """
 class GPIO:
