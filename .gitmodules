@@ -1,0 +1,3 @@
+[submodule "path_to_submodule"] 
+  path = MotorShield 
+  url = https://github.com/sbcshop/MotorShield.git
