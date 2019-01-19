@@ -24,7 +24,7 @@ STEP_DELTA_RADIUS = (RADIUS_MAX - RADIUS_MIN) / STEPS_FOR_FULL_EXTENSION
 STEP_DELTA_ROTATION = 2 * math.pi / STEPS_FOR_FULL_ROTATION
 
 # How long to sleep twixt steps
-STEP_TIME = 0.01
+STEP_TIME = 0.001
 
 
 # Represents a cartesian coordinate
@@ -258,7 +258,7 @@ def main():
     spinner = StepperState(STEPPER1_PINS)
     slider = StepperState(STEPPER2_PINS)
 
-    for i in range(200):
+    for i in range(600):
         spinner.step_forward()
         tick()
 
