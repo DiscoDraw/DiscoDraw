@@ -29,7 +29,7 @@ RADIUS_MAX = 500
 
 # Steps required to traverse bounds
 STEPS_FOR_FULL_ROTATION = 1000
-STEPS_FOR_FULL_EXTENSION = 500
+STEPS_FOR_FULL_EXTENSION = 500f
 
 # Deltas computed based on above values
 STEP_DELTA_RADIUS = (RADIUS_MAX - RADIUS_MIN) / STEPS_FOR_FULL_EXTENSION
@@ -129,9 +129,9 @@ class MachineStep:
 # Raw GPIO interface to the motors
 class StepperState:
     # Codes for motor
-    SEQ = [[1, 0, 1, 0],
+    SEQ = [[1, 1, 0, 0],
            [0, 1, 1, 0],
-           [0, 1, 0, 1],
+           [0, 0, 1, 1],
            [1, 0, 0, 1]]
 
     def __init__(self, pin_config):
