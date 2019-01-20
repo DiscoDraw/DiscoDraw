@@ -4,12 +4,12 @@
 #include <linux/delay.h>
 #include <linux/gpio.h>
 
-#define THREAD_NAME "enc_t"
+MODULE_LICENSE("GPL");
 
-#define E1A 18 // 0
-#define E1B 16 // 1
-#define E2A 24 // 2
-#define E2B 22 // 3
+#define E1A 23 // 18 // 0
+#define E1B 24 // 16 // 1
+#define E2A 25 // 24 // 2
+#define E2B 8  // 22 // 3
 
 #define ENC1 1
 #define ENC2 2
@@ -20,16 +20,21 @@ static u32 enc2_position = 0;
 
 /* GPIO Initialization */
 void enc_gpio_init(void){
+    int result;
     printk(KERN_INFO "ENC: starting gpio...");
     gpio_request(E1A, "E1A");
     gpio_request(E1B, "E1B");
     gpio_request(E2A, "E2A");
     gpio_request(E2B, "E2B");
 
-    gpio_direction_input(E1A);
-    gpio_direction_input(E1B);
-    gpio_direction_input(E2A);
-    gpio_direction_input(E2B);
+    result = gpio_direction_input(E1A);
+    printk("Get direction result: %d\n", result);
+    result = gpio_direction_input(E1B);
+    printk("Get direction result: %d\n", result);
+    result = gpio_direction_input(E2A);
+    printk("Get direction result: %d\n", result);
+    result = gpio_direction_input(E2B);
+    printk("Get direction result: %d\n", result);
     printk(KERN_INFO "ENC: starting gpio done.");
 }
 
@@ -48,10 +53,10 @@ void enc_gpio_exit(void){
 static struct kobject *enc_kobject;
 
 static ssize_t get_enc(struct kobject *kobj, struct kobj_attribute *attr, char *buffer) {
-    return scnprintf(buffer, 4096, "%u %u", enc1, enc2);
+    return scnprintf(buffer, 4096, "%u %u", enc1_position, enc2_position);
 }
 
-static struct kobj_attribute enc_attribute =__ATTR(dot, (S_IWUSR | S_IRUGO), get_enc);
+static struct kobj_attribute enc_attribute =__ATTR(dot, (S_IWUSR | S_IRUGO), get_enc, NULL);
 
 void enc_sysfs_init(void){
     printk(KERN_INFO "ENC: starting sysfs...");
@@ -71,23 +76,30 @@ void enc_sysfs_exit(void){
 
 /* THREAD */
 
-#define THREAD_PRIORITY 45
+#define THREAD_PRIORITY 50
 #define THREAD_NAME "enc"
+
+struct sched_param 
+ {
+	int __sched_priority;
+ };
 
 struct task_struct *task;
 
 int enc_thread(void *data){
     u8 seq1_old, seq2_old;
-    u8 seq, a, b, d;
+    u8 seq, a, b;
     seq1_old = 0;
     seq2_old = 0;
     struct task_struct *TSK;
-    struct sched_param PARAM = { .sched_priority = MAX_RT_PRIO - 50 };
-    //struct sched_param PARAM = { .sched_priority = DEFAULT_PRIO };
+    struct sched_param PARAM;
     TSK = current;
 
-    PARAM.sched_priority = THREAD_PRIORITY;
+    PARAM.__sched_priority = THREAD_PRIORITY;
     sched_setscheduler(TSK, SCHED_FIFO, &PARAM);
+
+    printk("E1 A: %d. E1 B: %d\n", gpio_get_value(E1A), gpio_get_value(E1B));
+    printk("E2 A: %d. E2 B: %d\n", gpio_get_value(E2A), gpio_get_value(E2B));
 
     while(1) {
         // Read in seq values for enc 1

@@ -1,0 +1,1 @@
+make; sudo rmmod encodio; sudo insmod encodio.ko
