@@ -17,7 +17,7 @@ RADIUS_MIN = 5.0
 RADIUS_MAX = 500.0
 
 # Steps required to traverse bounds
-STEPS_FOR_FULL_ROTATION = int(64 * 43.8 * 3)
+STEPS_FOR_FULL_ROTATION = int(64 * 30 * 3)
 STEPS_FOR_FULL_EXTENSION = int(64 * 10)  # TODO: FIX
 
 # Deltas computed based on above values
@@ -226,11 +226,29 @@ class EncoderTracker:
         self.steps_remaining = 0
         self.idle = True
 
+        # Store the last pin state
+        self.last_seq = self.get_seq()
+
+    # Get the current state of our pins
+    def get_seq(self) -> int:
+        a, b = GPIO.input(self.pin_a), GPIO.input(self.pin_b)
+        return (a ^ b) | b << 1
+
     # Called whenever the encoder changes states.
     # For now we assume this is a change in the direction we expect
     # For later we will allow handling unexpected motion
     def callback(self, channel):
-        self.steps_remaining -= 1
+        # Get the current seq
+        curr_seq = self.get_seq()
+
+        # See how far it has changed
+        delta = (curr_seq - self.last_seq) % 4
+
+        # Update our values
+        self.last_seq = curr_seq
+        self.steps_remaining -= delta
+
+        # Stop. May overshoot by a certain amount
         if self.steps_remaining <= 0:
             self.motor.stop()
             self.steps_remaining = 0
@@ -277,7 +295,7 @@ def main():
     loop = asyncio.get_event_loop()
 
     # Have the motor go for a little bit
-    SPEED = 20
+    SPEED = 28
     motion = spinner_encoder.move_steps(STEPS_FOR_FULL_ROTATION, SPEED)
 
     # Run it
