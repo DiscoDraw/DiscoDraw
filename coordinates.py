@@ -164,11 +164,16 @@ SEQ = [0b00, 0b01, 0b11, 0b10]
 LIMIT_SWITCH_PIN = 12
 
 
+BOUND = 2147483647
 def read_locations() -> Tuple[int, int]:
     with open("/sys/enc/dot", 'r') as f:
         text = f.read()
         one, two = text.split(' ')
         one, two = int(one), int(two)
+        if one > BOUND:
+            one -= (2*BOUND)
+        if two > BOUND:
+            two -= (2*BOUND)
         return one, two
 
 
