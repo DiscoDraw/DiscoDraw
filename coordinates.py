@@ -13,14 +13,22 @@ from MotorShield import PiMotor as pimotor
 GPIO.setmode(GPIO.BOARD)
 
 # setup LED pins
-left_pin = 33
-right_pin = 35
-up_pin = 36
-down_pin = 37
-GPIO.setup(left_pin, GPIO.OUT)
-GPIO.setup(right_pin, GPIO.OUT)
-GPIO.setup(up_pin, GPIO.OUT)
-GPIO.setup(down_pin, GPIO.OUT)
+leftLED_pin = 13  # pin33
+rightLED_pin = 19  # pin35
+upLED_pin = 16  # pin 36
+downLED_pin = 26  # pin37
+GPIO.setup(leftLED_pin, GPIO.OUT)
+GPIO.setup(rightLED_pin, GPIO.OUT)
+GPIO.setup(upLED_pin, GPIO.OUT)
+GPIO.setup(downLED_pin, GPIO.OUT)
+# setup button pins
+limit_switch = 18
+left_btn = 4
+right_btn = 17
+GPIO.setup(limit_switch, GPIO.IN)
+GPIO.setup(left_btn, GPIO.IN)
+GPIO.setup(right_btn, GPIO.IN)
+
 
 # Bounds for radius, in mm
 RADIUS_MIN = 5.0
@@ -340,17 +348,16 @@ def main():
 
     # LED setting
 
-
     # TODO DELETE THESE FOR TESTING
     moving_left = True
     moving_right = False
     moving_up = True
     moving_down = False
 
-    GPIO.output(left_pin, moving_left)
-    GPIO.output(right_pin, moving_right)
-    GPIO.output(up_pin, moving_up)
-    GPIO.output(down_pin, moving_down)
+    GPIO.output(leftLED_pin, moving_left)
+    GPIO.output(rightLED_pin, moving_right)
+    GPIO.output(upLED_pin, moving_up)
+    GPIO.output(downLED_pin, moving_down)
 
 
 if __name__ == '__main__':
