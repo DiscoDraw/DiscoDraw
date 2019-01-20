@@ -2,7 +2,9 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass
+import asyncio
 
+from MotorShield import PiMotor as pimotor
 
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BOARD)
@@ -12,11 +14,11 @@ GPIO.setmode(GPIO.BOARD)
 from typing import Iterable, Tuple, List
 
 # Bounds for radius, in mm
-RADIUS_MIN = 5
-RADIUS_MAX = 500
+RADIUS_MIN = 5f
+RADIUS_MAX = 500f
 
 # Steps required to traverse bounds
-STEPS_FOR_FULL_ROTATION = 1000
+STEPS_FOR_FULL_ROTATION = 64*43*3 # TODO: FIX
 STEPS_FOR_FULL_EXTENSION = 500
 
 # Deltas computed based on above values
@@ -243,20 +245,100 @@ class MachineState:
             tick()
 
 
-STEPPER1_PINS = {"en1": 11, "en2": 22, "c1": 13, "c2": 15, "c3": 18, "c4": 16}
-STEPPER2_PINS = {"en1": 19, "en2": 32, "c1": 21, "c2": 23, "c3": 24, "c4": 26}
 DEFAULT_START_POS = Cartesian(RADIUS_MIN, 0).polar
+
+
+# Encoder sequence
+SEQ = [0b00, 0b01, 0b11, 0b10]
+
+# Encoder pins (fmt A, B)
+ENCODER_1_PINS = (24, 23)
+ENCODER_2_PINS = (8, 25)
+
+class EncoderTracker:
+    def __init__(self, motor: pimotor.Motor, pin_a: int, pin_b: int):
+        # Store the motor
+        self.motor = motor
+
+        # Store the pins
+        self.pin_a = pin_a
+        self.pin_b = pin_b
+
+        # Add a callback for when they change
+        GPIO.add_interrupt_callback(self.pin_a, self.callback,
+                                    pull_up_down=GPIO.PUD_UP, threaded_callback=True)
+        GPIO.add_interrupt_callback(self.pin_b, self.callback,
+                                    pull_up_down=GPIO.PUD_UP, threaded_callback=True)
+
+        # Store the initial state
+        # pin_state = (GPIO.input(pin_a), GPIO.input(pin_b))
+
+        # Store the number of steps remaining
+        self.steps_remaining = 0
+        self.idle = True
+
+
+    # Called whenever the encoder changes states.
+    # For now we assume this is a change in the direction we expect
+    # For later we will allow handling unexpected motion
+    def callback(self, gpio_id, val):
+        self.steps_remaining -= 1
+        if self.steps_remaining <= 0:
+            self.motor.stop()
+            self.steps_remaining = 0
+            self.idle = True
+
+    async def move_steps(self, num_steps: int, speed: int):
+        assert 0 < speed <= 100
+
+        # Get the absolute number of steps remaining
+        self.steps_remaining = abs(num_steps)
+
+        # Start the motor spinning
+        if num_steps > 0:
+            self.motor.forward(speed)
+            self.idle = False
+        elif num_steps < 0:
+            self.motor.reverse(speed)
+            self.idle = False
+
+        # Wait till the motion is done
+        while True:
+            await asyncio.sleep(0.1)
+            if self.idle:
+                break
+
+
 
 
 def failfast():
     raise Exception("Abort")
 
 
+# Create motorstates using the gpio
+spinner_motor = pimotor.Motor("MOTOR1")
+slider_motor = pimotor.Motor("MOTOR2")
+
 # The main runtime
-def main():
-    # Create motorstates using the gpio
-    spinner = StepperState(STEPPER1_PINS)
-    slider = StepperState(STEPPER2_PINS)
+async def main():
+    # Make our corresponding encoders
+    spinner_encoder = EncoderTracker(spinner_motor, *ENCODER_1_PINS)
+    slider_encoder = EncoderTracker(slider_motor, *ENCODER_2_PINS)
+
+    # Initialize interrupt waiting
+    GPIO.wait_for_interrupts(threaded=True)
+
+    # Get our asyncio event loop
+    loop = asyncio.get_event_loop()
+
+    # Have the motor go for a little bit
+    SPEED = 20
+    motion = spinner_encoder.move_steps(1000, SPEED)
+
+    # Run it
+    loop.run_until_complete(motion)
+
+    failfast()
 
     for i in range(600):
         spinner.step_forward()
@@ -300,15 +382,6 @@ if __name__ == '__main__':
         err = e
         pass
     finally:
-        GPIO.setup(STEPPER1_PINS["en1"], GPIO.OUT)
-        GPIO.output(STEPPER1_PINS["en1"], GPIO.LOW)
-
-        GPIO.setup(STEPPER1_PINS["en2"], GPIO.OUT)
-        GPIO.output(STEPPER1_PINS["en2"], GPIO.LOW)
-
-        GPIO.setup(STEPPER2_PINS["en1"], GPIO.OUT)
-        GPIO.output(STEPPER2_PINS["en1"], GPIO.LOW)
-
-        GPIO.setup(STEPPER2_PINS["en2"], GPIO.OUT)
-        GPIO.output(STEPPER2_PINS["en2"], GPIO.LOW)
-    raise err
+        spinner_motor.stop()
+        slider_motor.stop()
+        raise err
