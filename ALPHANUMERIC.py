@@ -42,7 +42,7 @@ def get_letter(l):
 
 
 # Convert a string to a sequence of alphanumeric letters
-def write(string: str, scale: float) -> List[Tuple(float, float)]:
+def write(string: str, scale: float) -> List[Tuple[float, float]]:
     # This tracks where we are currently writing
     cursor = (0, 0)
 

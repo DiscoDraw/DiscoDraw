@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import time
 import ALPHANUMERIC
 from dataclasses import dataclass
 from typing import Iterable, Tuple, List
@@ -14,21 +15,21 @@ from MotorShield import PiMotor as pimotor
 GPIO.setmode(GPIO.BOARD)
 
 # setup LED pins
-leftLED_pin = 13  # pin33
-rightLED_pin = 19  # pin35
-upLED_pin = 16  # pin 36
-downLED_pin = 26  # pin37
-GPIO.setup(leftLED_pin, GPIO.OUT)
-GPIO.setup(rightLED_pin, GPIO.OUT)
-GPIO.setup(upLED_pin, GPIO.OUT)
-GPIO.setup(downLED_pin, GPIO.OUT)
-# setup button pins
-limit_switch = 18
-left_btn = 4
-right_btn = 17
-GPIO.setup(limit_switch, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(left_btn, GPIO.IN)
-GPIO.setup(right_btn, GPIO.IN)
+# leftLED_pin = 13  # pin33
+# rightLED_pin = 19  # pin35
+# upLED_pin = 16  # pin 36
+# downLED_pin = 26  # pin37
+# GPIO.setup(leftLED_pin, GPIO.OUT)
+# GPIO.setup(rightLED_pin, GPIO.OUT)
+# GPIO.setup(upLED_pin, GPIO.OUT)
+# GPIO.setup(downLED_pin, GPIO.OUT)
+# # setup button pins
+# limit_switch = 18
+# left_btn = 4
+# right_btn = 17
+# GPIO.setup(limit_switch, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# GPIO.setup(left_btn, GPIO.IN)
+# GPIO.setup(right_btn, GPIO.IN)
 
 
 # Bounds for radius, in mm
@@ -273,7 +274,9 @@ def main():
 
     # Spin backwards till we hit root
     slider_motor.reverse(50)
-    while GPIO.input(limit_switch):
+    GPIO.setup(LIMIT_SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    time.sleep(.3)
+    while GPIO.input(LIMIT_SWITCH_PIN):
         pass
     slider_motor.stop()
 
