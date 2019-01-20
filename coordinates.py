@@ -167,6 +167,8 @@ LIMIT_SWITCH_PIN = 12
 
 BOUND = 2147483647
 def read_locations() -> Tuple[int, int]:
+    if 1:
+        return 0, 0
     with open("/sys/enc/dot", 'r') as f:
         text = f.read()
         one, two = text.split(' ')
