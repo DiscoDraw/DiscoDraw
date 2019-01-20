@@ -295,7 +295,7 @@ def main():
     loop = asyncio.get_event_loop()
 
     # Have the motor go for a little bit
-    SPEED = 28
+    SPEED = 26
     motion = spinner_encoder.move_steps(STEPS_FOR_FULL_ROTATION, SPEED)
 
     # Run it
