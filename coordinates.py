@@ -193,86 +193,73 @@ SEQ = [0b00, 0b01, 0b11, 0b10]
 # Encoder pins (fmt A, B)
 # Pins are, physically, 24:23 and 8:25
 # Translates to 18:16 and 24:22
-ENCODER_1_PINS = (18, 16)
-ENCODER_2_PINS = (24, 22)
+# ENCODER_1_PINS = (18, 16)
+# ENCODER_2_PINS = (24, 22)
 
 # limit switch: P18 -> 12
 LIMIT_SWITCH_PIN = 12
 
+def read_locations() -> Tuple[int, int]:
+    with open("/sys/enc/dot", 'r') as f:
+        text = f.read()
+        one, two = text.split(' ')
+        one, two = int(one), int(two)
+        return one, two
+
 
 class EncoderTracker:
-    def __init__(self, motor: pimotor.Motor, pin_a: int, pin_b: int):
-        # Store the motor
-        self.motor = motor
+    # Store the targets
+    motor1_dest: int
+    motor2_dest: int
 
-        # Store the pins
-        self.pin_a = pin_a
-        self.pin_b = pin_b
+    motor1: pimotor.Motor
+    motor2: pimotor.Motor
 
-        # Add a callback for when they change
-        # GPIO.add_interrupt_callback(self.pin_a, self.callback,
-        #                             pull_up_down=GPIO.PUD_UP, threaded_callback=True)
-        # GPIO.add_interrupt_callback(self.pin_b, self.callback,
-        #                             pull_up_down=GPIO.PUD_UP, threaded_callback=True)
-        for pin in self.pin_a, self.pin_b:
-            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.add_event_detect(pin, GPIO.BOTH)
-            GPIO.add_event_callback(pin, self.callback)
+    def __init__(self, motor1: pimotor.Motor, motor2: pimotor.Motor):
+        # Store the motors
+        self.motor1 = motor1
+        self.motor2 = motor2
 
-        # Store the initial state
-        # pin_state = (GPIO.input(pin_a), GPIO.input(pin_b))
-
-        # Store the number of steps remaining
-        self.steps_remaining = 0
-        self.idle = True
-
-        # Store the last pin state
-        self.last_seq = self.get_seq()
-
-    # Get the current state of our pins
-    def get_seq(self) -> int:
-        a, b = GPIO.input(self.pin_a), GPIO.input(self.pin_b)
-        return (a ^ b) | b << 1
-
-    # Called whenever the encoder changes states.
-    # For now we assume this is a change in the direction we expect
-    # For later we will allow handling unexpected motion
-    def callback(self, channel):
-        # Get the current seq
-        curr_seq = self.get_seq()
-
-        # See how far it has changed
-        delta = (curr_seq - self.last_seq) % 4
-
-        # Update our values
-        self.last_seq = curr_seq
-        self.steps_remaining -= delta
-
-        # Stop. May overshoot by a certain amount
-        if self.steps_remaining <= 0:
-            self.motor.stop()
-            self.steps_remaining = 0
-            self.idle = True
-
-    async def move_steps(self, num_steps: int, speed: int):
+    async def goto_destinations(self, motor1_dest: int, motor2_dest: int, speed: int):
         assert 0 < speed <= 100
 
-        # Get the absolute number of steps remaining
-        self.steps_remaining = abs(num_steps)
+        # Get the current positions
+        done1, done2 = False, False
+        tolerance = 64
 
-        # Start the motor spinning
-        if num_steps > 0:
-            self.motor.forward(speed)
-            self.idle = False
-        elif num_steps < 0:
-            self.motor.reverse(speed)
-            self.idle = False
+        # Iterate until within tolerance
+        while not (done1 and done2):
+            # Get current offsets
+            positions = read_locations()
+            d1 = motor1_dest - positions[0]
+            d2 = motor2_dest - positions[1]
 
-        # Wait till the motion is done
-        while True:
-            await asyncio.sleep(0.1)
-            if self.idle:
-                break
+            # Check m1
+            if done1:
+                # If we're already done, do nothing
+                pass
+            elif d1 > tolerance:
+                self.motor1.forward(speed)
+            elif d1 < -tolerance:
+                self.motor1.reverse(speed)
+            else:
+                done1 = True
+                self.motor1.stop()
+
+            # Check m2
+            if done2:
+                # If we're already done, do nothing
+                pass
+            elif d2 > tolerance:
+                self.motor2.forward(speed)
+            elif d2 < -tolerance:
+                self.motor2.reverse(speed)
+            else:
+                done2 = True
+                self.motor2.stop()
+
+            # Sleep for a bit
+            await asyncio.sleep(STEP_TIME)
 
 
 # Force an exception
@@ -285,18 +272,19 @@ spinner_motor = pimotor.Motor("MOTOR1", 1)
 slider_motor = pimotor.Motor("MOTOR2", 1)
 
 
+
+
 # The main runtime
 def main():
     # Make our corresponding encoders
-    spinner_encoder = EncoderTracker(spinner_motor, *ENCODER_1_PINS)
-    slider_encoder = EncoderTracker(slider_motor, *ENCODER_2_PINS)
+    spinner_encoder = EncoderTracker(spinner_motor, slider_motor)
 
     # Get our asyncio event loop
     loop = asyncio.get_event_loop()
 
     # Have the motor go for a little bit
     SPEED = 26
-    motion = spinner_encoder.move_steps(STEPS_FOR_FULL_ROTATION, SPEED)
+    motion = spinner_encoder.goto_destinations(0, 0, SPEED)
 
     # Run it
     print("Attempting run")
