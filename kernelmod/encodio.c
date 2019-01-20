@@ -96,7 +96,7 @@ int enc_thread(void *data){
         seq = (a ^ b) | (b << 1);
 
         // Update delta
-        switch (seq - old_seq1) {
+        switch (seq - seq1_old) {
             default:
             case 0: // No change
                 break;
@@ -108,12 +108,14 @@ int enc_thread(void *data){
             case 2:
             case -2:
                 // One step in unclear direction. 50/50 shot. just add the delta for chaos
-                enc1_position += seq - old_seq1;
+                enc1_position += seq - seq1_old;
             case 3:
             case -1:
                 // One step cclockwise. Subtract 1
                 enc1_position -= 1;
         }
+        // Update old val
+        seq1_old = seq;
 
         // Read in seq values for enc 1
         a = gpio_get_value(E2A);
@@ -121,7 +123,7 @@ int enc_thread(void *data){
         seq = (a ^ b) | (b << 1);
 
         // Update delta
-        switch (seq - old_seq2) {
+        switch (seq - seq2_old) {
             default:
             case 0: // No change
                 break;
@@ -133,16 +135,15 @@ int enc_thread(void *data){
             case 2:
             case -2:
                 // One step in unclear direction. 50/50 shot. just add the delta for chaos
-                enc2_position += seq - old_seq2;
+                enc2_position += seq - seq2_old;
             case 3:
             case -1:
                 // One step cclockwise. Subtract 1
                 enc2_position -= 1;
         }
 
-        // Update old vals
-        seq1_old = seq1;
-        seq2_old = seq2;
+        // Update old val
+        seq2_old = seq;
     
         if (kthread_should_stop()) {
             break;
