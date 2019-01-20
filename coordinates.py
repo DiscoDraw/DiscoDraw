@@ -17,8 +17,8 @@ RADIUS_MIN = 5.0
 RADIUS_MAX = 500.0
 
 # Steps required to traverse bounds
-STEPS_FOR_FULL_ROTATION = 64 * 43 * 3  # TODO: FIX
-STEPS_FOR_FULL_EXTENSION = 500
+STEPS_FOR_FULL_ROTATION = int(64 * 43.8 * 3)
+STEPS_FOR_FULL_EXTENSION = int(64 * 10)  # TODO: FIX
 
 # Deltas computed based on above values
 STEP_DELTA_RADIUS = (RADIUS_MAX - RADIUS_MIN) / STEPS_FOR_FULL_EXTENSION
@@ -273,15 +273,12 @@ def main():
     spinner_encoder = EncoderTracker(spinner_motor, *ENCODER_1_PINS)
     slider_encoder = EncoderTracker(slider_motor, *ENCODER_2_PINS)
 
-    # Initialize interrupt waiting
-    GPIO.wait_for_interrupts(threaded=True)
-
     # Get our asyncio event loop
     loop = asyncio.get_event_loop()
 
     # Have the motor go for a little bit
     SPEED = 20
-    motion = spinner_encoder.move_steps(1000, SPEED)
+    motion = spinner_encoder.move_steps(STEPS_FOR_FULL_ROTATION, SPEED)
 
     # Run it
     print("Attempting run")
