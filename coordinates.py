@@ -116,59 +116,6 @@ class MachineStep:
         return self.slider_step.delta_step == 0 and self.spinner_step.delta_step == 0
 
 
-# Raw GPIO interface to the motors
-class StepperState:
-    # Codes for motor
-    SEQ = [[1, 1, 0, 0],
-           [0, 1, 1, 0],
-           [0, 0, 1, 1],
-           [1, 0, 0, 1]]
-
-    def __init__(self, pin_config):
-        # Initialize our index and config
-        self.index = 0
-        self.config = pin_config
-
-        # Initialize the motor
-        GPIO.setup(self.config["en1"], GPIO.OUT)
-        GPIO.setup(self.config["en2"], GPIO.OUT)
-        GPIO.setup(self.config["c1"], GPIO.OUT)
-        GPIO.setup(self.config["c2"], GPIO.OUT)
-        GPIO.setup(self.config["c3"], GPIO.OUT)
-        GPIO.setup(self.config["c4"], GPIO.OUT)
-
-        # Set the pins to their default state
-        GPIO.output(self.config["en1"], GPIO.HIGH)
-        GPIO.output(self.config["en2"], GPIO.HIGH)
-        self.output(StepperState.SEQ[self.index])
-
-    def output(self, code):
-        GPIO.output(self.config["c1"], code[0])
-        GPIO.output(self.config["c2"], code[1])
-        GPIO.output(self.config["c3"], code[2])
-        GPIO.output(self.config["c4"], code[3])
-
-    def step_forward(self):
-        self.index += 1
-        if self.index >= len(StepperState.SEQ):
-            self.index = 0
-        self.output(StepperState.SEQ[self.index])
-
-    def step_backward(self):
-        self.index -= 1
-        if self.index < 0:
-            self.index = len(StepperState.SEQ) - 1
-        self.output(StepperState.SEQ[self.index])
-
-    def apply(self, step: MotorStep):
-        if step == MotorStep.NEUTRAL:
-            return
-        elif step == MotorStep.FORWARD:
-            self.step_forward()
-        elif step == MotorStep.BACKWARD:
-            self.step_backward()
-
-
 # Yields the neighbors of a point (IE all points within 1 step). Includes the neutral step (IE no movement)
 def neighbors(p: Polar) -> Iterable[Tuple[Polar, MachineStep]]:
     step_options = (MotorStep.BACKWARD, MotorStep.NEUTRAL, MotorStep.FORWARD)
@@ -222,10 +169,10 @@ class Plan:
 
 # Class to track machine state and execute motions
 class MachineState:
-    spinner_state: StepperState
-    slider_state: StepperState
+    spinner_state: EncoderTracker
+    slider_state: EncoderTracker
 
-    def __init__(self, spinner: StepperState, slider: StepperState):
+    def __init__(self, spinner: EncoderTracker, slider: EncoderTracker):
         self.spinner_state = spinner
         self.slider_state = slider
 
@@ -233,8 +180,9 @@ class MachineState:
         # Execute each machine step in sequence
         for step in plan:
             # Apply the steps
-            self.spinner_state.apply(step.spinner_step)
-            self.slider_state.apply(step.slider_step)
+            # self.spinner_state.apply(step.spinner_step)
+            # self.slider_state.apply(step.slider_step)
+            pass
 
 
 DEFAULT_START_POS = Cartesian(RADIUS_MIN, 0).polar
@@ -247,6 +195,9 @@ SEQ = [0b00, 0b01, 0b11, 0b10]
 # Translates to 18:16 and 24:22
 ENCODER_1_PINS = (18, 16)
 ENCODER_2_PINS = (24, 22)
+
+# limit switch: P18 -> 12
+LIMIT_SWITCH_PIN = 12
 
 
 class EncoderTracker:
@@ -264,7 +215,7 @@ class EncoderTracker:
         # GPIO.add_interrupt_callback(self.pin_b, self.callback,
         #                             pull_up_down=GPIO.PUD_UP, threaded_callback=True)
         for pin in self.pin_a, self.pin_b:
-            GPIO.setup(pin, GPIO.IN)
+            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             GPIO.add_event_detect(pin, GPIO.BOTH)
             GPIO.add_event_callback(pin, self.callback)
 
@@ -333,6 +284,7 @@ def main():
     motion = spinner_encoder.move_steps(1000, SPEED)
 
     # Run it
+    print("Attempting run")
     loop.run_until_complete(motion)
 
     failfast()
@@ -369,6 +321,9 @@ if __name__ == '__main__':
         err = e
         pass
     finally:
-        spinner_motor.stop()
-        slider_motor.stop()
+        try:
+            spinner_motor.stop()
+            slider_motor.stop()
+        except RuntimeError:
+            pass
         raise err
