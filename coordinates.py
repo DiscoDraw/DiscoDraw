@@ -262,9 +262,9 @@ class EncoderTracker:
         # GPIO.add_interrupt_callback(self.pin_b, self.callback,
         #                             pull_up_down=GPIO.PUD_UP, threaded_callback=True)
         for pin in self.pin_a, self.pin_b:
-            GPIO.setup(self.pin, GPIO.IN)
-            GPIO.add_event_detect(self.pin, GPIO.BOTH)
-            GPIO.add_event_callback(self.pin, self.callback)
+            GPIO.setup(pin, GPIO.IN)
+            GPIO.add_event_detect(pin, GPIO.BOTH)
+            GPIO.add_event_callback(pin, self.callback)
 
         # Store the initial state
         # pin_state = (GPIO.input(pin_a), GPIO.input(pin_b))
