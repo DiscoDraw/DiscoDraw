@@ -1,15 +1,15 @@
 from __future__ import annotations
-import math
-import time
-from dataclasses import dataclass
-import asyncio
 
+import asyncio
+import math
+from dataclasses import dataclass
 from typing import Iterable, Tuple, List
+
+import RPIO as GPIO
+
 from MotorShield import PiMotor as pimotor
 
-import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BOARD)
-
 
 # Bounds for radius, in mm
 RADIUS_MIN = 5.0
@@ -331,8 +331,8 @@ def main():
     failfast()
 
     # Spin backwards till we hit root
-    while not "LIMIT_SWITCH":
-        # slider.step_forward()
+    # while not "LIMIT_SWITCH":
+    # pass
 
     # Make the machine.
     # machine = MachineState(spinner, slider)
