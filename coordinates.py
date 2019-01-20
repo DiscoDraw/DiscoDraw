@@ -4,21 +4,19 @@ import time
 from dataclasses import dataclass
 import asyncio
 
+from typing import Iterable, Tuple, List
 from MotorShield import PiMotor as pimotor
 
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BOARD)
-#Niko test commit
 
-# Assume all floats are in mm/radians
-from typing import Iterable, Tuple, List
 
 # Bounds for radius, in mm
-RADIUS_MIN = 5f
-RADIUS_MAX = 500f
+RADIUS_MIN = 5.0
+RADIUS_MAX = 500.0
 
 # Steps required to traverse bounds
-STEPS_FOR_FULL_ROTATION = 64*43*3 # TODO: FIX
+STEPS_FOR_FULL_ROTATION = 64 * 43 * 3  # TODO: FIX
 STEPS_FOR_FULL_EXTENSION = 500
 
 # Deltas computed based on above values
@@ -106,6 +104,7 @@ MotorStep.NEUTRAL = MotorStep(0)
 MotorStep.FORWARD = MotorStep(1)
 MotorStep.BACKWARD = MotorStep(-1)
 
+
 # Encodes the sum-total of actions a machine can make in a single step
 @dataclass
 class MachineStep:
@@ -179,11 +178,6 @@ def neighbors(p: Polar) -> Iterable[Tuple[Polar, MachineStep]]:
             yield new_coord, step_required
 
 
-# Waits for steppers to finish a movement
-def tick():
-    time.sleep(STEP_TIME)
-
-
 # Class to plan out motions
 class Plan:
     position: Polar
@@ -241,12 +235,8 @@ class MachineState:
             self.spinner_state.apply(step.spinner_step)
             self.slider_state.apply(step.slider_step)
 
-            # Delay
-            tick()
-
 
 DEFAULT_START_POS = Cartesian(RADIUS_MIN, 0).polar
-
 
 # Encoder sequence
 SEQ = [0b00, 0b01, 0b11, 0b10]
@@ -254,6 +244,7 @@ SEQ = [0b00, 0b01, 0b11, 0b10]
 # Encoder pins (fmt A, B)
 ENCODER_1_PINS = (24, 23)
 ENCODER_2_PINS = (8, 25)
+
 
 class EncoderTracker:
     def __init__(self, motor: pimotor.Motor, pin_a: int, pin_b: int):
@@ -276,7 +267,6 @@ class EncoderTracker:
         # Store the number of steps remaining
         self.steps_remaining = 0
         self.idle = True
-
 
     # Called whenever the encoder changes states.
     # For now we assume this is a change in the direction we expect
@@ -309,18 +299,18 @@ class EncoderTracker:
                 break
 
 
-
-
+# Force an exception
 def failfast():
     raise Exception("Abort")
 
 
 # Create motorstates using the gpio
-spinner_motor = pimotor.Motor("MOTOR1")
-slider_motor = pimotor.Motor("MOTOR2")
+spinner_motor = pimotor.Motor("MOTOR1", 1)
+slider_motor = pimotor.Motor("MOTOR2", 1)
+
 
 # The main runtime
-async def main():
+def main():
     # Make our corresponding encoders
     spinner_encoder = EncoderTracker(spinner_motor, *ENCODER_1_PINS)
     slider_encoder = EncoderTracker(slider_motor, *ENCODER_2_PINS)
@@ -340,21 +330,12 @@ async def main():
 
     failfast()
 
-    for i in range(600):
-        spinner.step_forward()
-        tick()
-
-
-    failfast()
-
-
     # Spin backwards till we hit root
     while not "LIMIT_SWITCH":
-        slider.step_forward()
-        tick()
+        # slider.step_forward()
 
     # Make the machine.
-    machine = MachineState(spinner, slider)
+    # machine = MachineState(spinner, slider)
 
     # Make the plan. We assume the arm is pointed east, IE in the positive x axis direction, denoting zero rotation
     plan = Plan(DEFAULT_START_POS)
@@ -371,8 +352,7 @@ async def main():
         plan.goto_polar(pos)
 
     # Go for it, dude
-    machine.execute(plan)
-
+    # machine.execute(plan)
 
 if __name__ == '__main__':
     err = None
