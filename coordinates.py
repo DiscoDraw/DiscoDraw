@@ -5,7 +5,8 @@ import math
 from dataclasses import dataclass
 from typing import Iterable, Tuple, List
 
-import RPIO as GPIO
+# import RPIO as GPIO
+import RPi.GPIO as GPIO
 
 from MotorShield import PiMotor as pimotor
 
@@ -256,10 +257,14 @@ class EncoderTracker:
         self.pin_b = pin_b
 
         # Add a callback for when they change
-        GPIO.add_interrupt_callback(self.pin_a, self.callback,
-                                    pull_up_down=GPIO.PUD_UP, threaded_callback=True)
-        GPIO.add_interrupt_callback(self.pin_b, self.callback,
-                                    pull_up_down=GPIO.PUD_UP, threaded_callback=True)
+        # GPIO.add_interrupt_callback(self.pin_a, self.callback,
+        #                             pull_up_down=GPIO.PUD_UP, threaded_callback=True)
+        # GPIO.add_interrupt_callback(self.pin_b, self.callback,
+        #                             pull_up_down=GPIO.PUD_UP, threaded_callback=True)
+        for pin in self.pin_a, self.pin_b:
+            GPIO.setup(self.pin, GPIO.IN)
+            GPIO.add_event_detect(self.pin, GPIO.BOTH)
+            GPIO.add_event_callback(self.pin, self.callback)
 
         # Store the initial state
         # pin_state = (GPIO.input(pin_a), GPIO.input(pin_b))
@@ -271,7 +276,7 @@ class EncoderTracker:
     # Called whenever the encoder changes states.
     # For now we assume this is a change in the direction we expect
     # For later we will allow handling unexpected motion
-    def callback(self, gpio_id, val):
+    def callback(self, channel):
         self.steps_remaining -= 1
         if self.steps_remaining <= 0:
             self.motor.stop()
