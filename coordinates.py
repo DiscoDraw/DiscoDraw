@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import ALPHANUMERIC
 from dataclasses import dataclass
 from typing import Iterable, Tuple, List
 
@@ -25,25 +26,25 @@ GPIO.setup(downLED_pin, GPIO.OUT)
 limit_switch = 18
 left_btn = 4
 right_btn = 17
-GPIO.setup(limit_switch, GPIO.IN)
+GPIO.setup(limit_switch, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(left_btn, GPIO.IN)
 GPIO.setup(right_btn, GPIO.IN)
 
 
 # Bounds for radius, in mm
-RADIUS_MIN = 5.0
-RADIUS_MAX = 500.0
+RADIUS_MIN = 0.0
+RADIUS_MAX = 10.0
 
 # Steps required to traverse bounds
 STEPS_FOR_FULL_ROTATION = int(64 * 30 * 3)
-STEPS_FOR_FULL_EXTENSION = int(64 * 10)  # TODO: FIX
+STEPS_FOR_FULL_EXTENSION = 500  # TODO: FIX
 
 # Deltas computed based on above values
 STEP_DELTA_RADIUS = (RADIUS_MAX - RADIUS_MIN) / STEPS_FOR_FULL_EXTENSION
 STEP_DELTA_ROTATION = 2 * math.pi / STEPS_FOR_FULL_ROTATION
 
 # How long to sleep twixt steps
-STEP_TIME = 0.001
+STEP_TIME = 0.01
 
 
 # Represents a cartesian coordinate
@@ -70,6 +71,16 @@ class Cartesian:
 
     def __mul__(self, other: float) -> Cartesian:
         return Cartesian(self.x * other, self.y * other)
+
+    def segment(self, max_length: float) -> List[Cartesian]:
+        # Breaks this cartesian coordinate into a list of smaller coordinates representing the steps betwixt
+        length = self.mag
+        min_req = math.ceil(length / max_length)
+        seg = self * (1/min_req)
+        results = []
+        for i in range(min_req):
+            results.append(seg * (i+1))
+        return results
 
 
 # Represents a polar coordinate
@@ -104,103 +115,38 @@ class Polar:
         return Polar(self.r * other.r, self.theta + other.theta).canonical
 
 
-# Encodes a single time-step's actions, for a single motor
-@dataclass
-class MotorStep:
-    delta_step: int
-
-    @property
-    def delta_radius(self):
-        return self.delta_step * STEP_DELTA_RADIUS
-
-    @property
-    def delta_rotation(self):
-        return self.delta_step * self.delta_rotation
-
-
-# Make standard steps
-MotorStep.NEUTRAL = MotorStep(0)
-MotorStep.FORWARD = MotorStep(1)
-MotorStep.BACKWARD = MotorStep(-1)
-
-
-# Encodes the sum-total of actions a machine can make in a single step
-@dataclass
-class MachineStep:
-    slider_step: MotorStep
-    spinner_step: MotorStep
-
-    def is_neutral(self):
-        return self.slider_step.delta_step == 0 and self.spinner_step.delta_step == 0
-
-
-# Yields the neighbors of a point (IE all points within 1 step). Includes the neutral step (IE no movement)
-def neighbors(p: Polar) -> Iterable[Tuple[Polar, MachineStep]]:
-    step_options = (MotorStep.BACKWARD, MotorStep.NEUTRAL, MotorStep.FORWARD)
-    for slider_step in step_options:
-        for spinner_step in step_options:
-            new_coord = Polar(p.r + slider_step.delta_radius, p.theta + spinner_step.delta_rotation)
-            step_required = MachineStep(slider_step, spinner_step)
-            yield new_coord, step_required
-
-
 # Class to plan out motions
 class Plan:
-    position: Polar
-    program: List[MachineStep] = []
+    position_polar: Polar
+    position_ticks: Tuple[int, int]
 
-    def __init__(self, initial_pos: Polar):
-        self.position = initial_pos
+    program: List[Tuple[int, int]] = []
+
+    def __init__(self, initial_pos: Polar, initial_ticks: Tuple[int, int]):
+        self.position_polar = initial_pos
+        self.position_ticks = initial_ticks
 
     def goto_polar(self, target_coord: Polar):
-        # Make a cartesian version of the target
-        target_coord_cart = target_coord.cartesian
+        # Find the change in angle/radius we need to make
+        delta_angle = target_coord.theta - self.position_polar.theta
+        delta_radius = target_coord.r - self.position_polar.r
 
-        # Create an evaluation function for proximity to target coord
-        def score(candidate_move: Tuple[Polar, MachineStep]) -> float:
-            # First make the candidate cartesian
-            candidate_pos = candidate_move[0].cartesian
+        # Convert to changes in ticks
+        delta_spinnner_tick = int(delta_angle / STEP_DELTA_ROTATION)
+        delta_slide_tick = int(delta_radius / STEP_DELTA_RADIUS)
 
-            # Find the distance twixt them
-            diff = target_coord_cart - candidate_pos
-            diff_mag = diff.mag
+        # Find new target ticks
+        self.position_ticks = (self.position_ticks[0] + delta_spinnner_tick,
+                               self.position_ticks[1] + delta_slide_tick)
 
-            return diff_mag
+        # Store to plan
+        self.program.append(self.position_ticks)
 
-        # Go until we get a neutral step
-        done = False
-        while not done:
-            # Get the step that will bring us closest
-            next_step = min(neighbors(self.position), key=score)
+        # Update our polar as well
+        self.position_polar = target_coord
 
-            # Check if we should stop
-            if next_step[1].is_neutral():
-                done = True
-            else:
-                # Update state, and add to plan
-                self.position = next_step[0]
-                self.program.append(next_step[1])
-
-    def __iter__(self) -> Iterable[MachineStep]:
+    def __iter__(self) -> Iterable[Tuple[int, int]]:
         yield from self.program
-
-
-# Class to track machine state and execute motions
-class MachineState:
-    spinner_state: EncoderTracker
-    slider_state: EncoderTracker
-
-    def __init__(self, spinner: EncoderTracker, slider: EncoderTracker):
-        self.spinner_state = spinner
-        self.slider_state = slider
-
-    def execute(self, plan: Plan):
-        # Execute each machine step in sequence
-        for step in plan:
-            # Apply the steps
-            # self.spinner_state.apply(step.spinner_step)
-            # self.slider_state.apply(step.slider_step)
-            pass
 
 
 DEFAULT_START_POS = Cartesian(RADIUS_MIN, 0).polar
@@ -216,6 +162,7 @@ SEQ = [0b00, 0b01, 0b11, 0b10]
 
 # limit switch: P18 -> 12
 LIMIT_SWITCH_PIN = 12
+
 
 def read_locations() -> Tuple[int, int]:
     with open("/sys/enc/dot", 'r') as f:
@@ -238,8 +185,9 @@ class EncoderTracker:
         self.motor1 = motor1
         self.motor2 = motor2
 
-    async def goto_destinations(self, motor1_dest: int, motor2_dest: int, speed: int):
-        assert 0 < speed <= 100
+    async def goto_destinations(self, motor1_dest: int, motor2_dest: int, spin_speed: int, slide_speed: int):
+        assert 0 < spin_speed <= 100
+        assert 0 < slide_speed <= 100
 
         # Get the current positions
         done1, done2 = False, False
@@ -257,39 +205,48 @@ class EncoderTracker:
                 # If we're already done, do nothing
                 pass
             elif d1 > tolerance:
-                self.motor1.forward(speed)
+                self.motor1.forward(spin_speed)
+                GPIO.output(leftLED_pin, True)
+                GPIO.output(rightLED_pin, False)
             elif d1 < -tolerance:
-                self.motor1.reverse(speed)
+                self.motor1.reverse(spin_speed)
+                GPIO.output(leftLED_pin, False)
+                GPIO.output(rightLED_pin, True)
             else:
                 done1 = True
                 self.motor1.stop()
+                GPIO.output(leftLED_pin, False)
+                GPIO.output(rightLED_pin, False)
 
             # Check m2
             if done2:
                 # If we're already done, do nothing
                 pass
             elif d2 > tolerance:
-                self.motor2.forward(speed)
+                self.motor2.forward(slide_speed)
+                GPIO.output(upLED_pin, True)
+                GPIO.output(downLED_pin, False)
             elif d2 < -tolerance:
-                self.motor2.reverse(speed)
+                self.motor2.reverse(slide_speed)
+                GPIO.output(upLED_pin, False)
+                GPIO.output(downLED_pin, True)
             else:
                 done2 = True
                 self.motor2.stop()
+                GPIO.output(upLED_pin, False)
+                GPIO.output(downLED_pin, False)
 
             # Sleep for a bit
             await asyncio.sleep(STEP_TIME)
 
-
-# Force an exception
-def failfast():
-    raise Exception("Abort")
+    async def execute(self, p: Plan, spin_speed: int, slide_speed: int) -> None:
+        for step in p:
+            await self.goto_destinations(step[0], step[1], spin_speed, slide_speed)
 
 
 # Create motorstates using the gpio
 spinner_motor = pimotor.Motor("MOTOR1", 1)
 slider_motor = pimotor.Motor("MOTOR2", 1)
-
-
 
 
 # The main runtime
@@ -301,51 +258,45 @@ def main():
     loop = asyncio.get_event_loop()
 
     # Have the motor go for a little bit
-    SPEED = 26
-    motion = spinner_encoder.goto_destinations(0, 0, SPEED)
+    SPIN_SPEED = 27
+    SLIDE_SPEED = 40
+    reset_motion = spinner_encoder.goto_destinations(0, 0, SPIN_SPEED)
 
     # Run it
     print("Attempting run")
-    loop.run_until_complete(motion)
-
-    failfast()
+    loop.run_until_complete(reset_motion)
 
     # Spin backwards till we hit root
-    # while not "LIMIT_SWITCH":
-    # pass
+    slider_motor.reverse(50)
+    while GPIO.input(limit_switch):
+        pass
+    slider_motor.stop()
 
-    # Make the machine.
-    # machine = MachineState(spinner, slider)
+    # Save this as the base of the slider
+    slider_base = read_locations()[1]
 
-    # Make the plan. We assume the arm is pointed east, IE in the positive x axis direction, denoting zero rotation
-    plan = Plan(DEFAULT_START_POS)
+    # Assume its already zeroed
+    spinner_base = read_locations()[0]
+    tick_base = (spinner_base, slider_base)
 
-    # Extend 1 foot, approx
-    extended = Cartesian(RADIUS_MAX / 2, 0).polar
-    plan.goto_polar(extended)
+    # Make as a plan
+    plan = Plan(DEFAULT_START_POS, tick_base)
 
-    # Draw a hexagon
-    pos = extended
-    delta = Polar(1, math.pi / 3)
-    for i in range(6):
-        pos = pos.cmul(delta)
-        plan.goto_polar(pos)
+    # Now we make what we want to draw
+    # Create all of the points
+    a = ALPHANUMERIC.get_letter('a')
+    points = a.waypoints
 
-    # Go for it, dude
-    # machine.execute(plan)
+    # Convert to polar
+    pol_points = [Polar(p[1]*0.1, 5+p[0]) for p in points]
 
-    # LED setting
+    # Add to the plan
+    for pol in pol_points:
+        plan.goto_polar(pol)
 
-    # TODO DELETE THESE FOR TESTING
-    moving_left = True
-    moving_right = False
-    moving_up = True
-    moving_down = False
-
-    GPIO.output(leftLED_pin, moving_left)
-    GPIO.output(rightLED_pin, moving_right)
-    GPIO.output(upLED_pin, moving_up)
-    GPIO.output(downLED_pin, moving_down)
+    # Go for it
+    plan_execution = spinner_encoder.execute(plan, SPIN_SPEED, SLIDE_SPEED)
+    loop.run_until_complete(plan_execution)
 
 
 if __name__ == '__main__':
