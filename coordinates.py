@@ -212,17 +212,17 @@ class EncoderTracker:
                 pass
             elif d1 > tolerance:
                 self.motor1.forward(spin_speed)
-                GPIO.output(leftLED_pin, True)
-                GPIO.output(rightLED_pin, False)
+                # GPIO.output(leftLED_pin, True)
+                # GPIO.output(rightLED_pin, False)
             elif d1 < -tolerance:
                 self.motor1.reverse(spin_speed)
-                GPIO.output(leftLED_pin, False)
-                GPIO.output(rightLED_pin, True)
+                # GPIO.output(leftLED_pin, False)
+                # GPIO.output(rightLED_pin, True)
             else:
                 done1 = True
                 self.motor1.stop()
-                GPIO.output(leftLED_pin, False)
-                GPIO.output(rightLED_pin, False)
+                # GPIO.output(leftLED_pin, False)
+                # GPIO.output(rightLED_pin, False)
 
             # Check m2
             if done2:
@@ -230,17 +230,17 @@ class EncoderTracker:
                 pass
             elif d2 > tolerance:
                 self.motor2.forward(slide_speed)
-                GPIO.output(upLED_pin, True)
-                GPIO.output(downLED_pin, False)
+                # GPIO.output(upLED_pin, True)
+                # GPIO.output(downLED_pin, False)
             elif d2 < -tolerance:
                 self.motor2.reverse(slide_speed)
-                GPIO.output(upLED_pin, False)
-                GPIO.output(downLED_pin, True)
+                # GPIO.output(upLED_pin, False)
+                # GPIO.output(downLED_pin, True)
             else:
                 done2 = True
                 self.motor2.stop()
-                GPIO.output(upLED_pin, False)
-                GPIO.output(downLED_pin, False)
+                # GPIO.output(upLED_pin, False)
+                # GPIO.output(downLED_pin, False)
 
             # Sleep for a bit
             await asyncio.sleep(STEP_TIME)
@@ -266,7 +266,7 @@ def main():
     # Have the motor go for a little bit
     SPIN_SPEED = 27
     SLIDE_SPEED = 40
-    reset_motion = spinner_encoder.goto_destinations(0, 0, SPIN_SPEED)
+    reset_motion = spinner_encoder.goto_destinations(0, 0, SPIN_SPEED, SLIDE_SPEED)
 
     # Run it
     print("Attempting run")
