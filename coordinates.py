@@ -243,8 +243,10 @@ DEFAULT_START_POS = Cartesian(RADIUS_MIN, 0).polar
 SEQ = [0b00, 0b01, 0b11, 0b10]
 
 # Encoder pins (fmt A, B)
-ENCODER_1_PINS = (24, 23)
-ENCODER_2_PINS = (8, 25)
+# Pins are, physically, 24:23 and 8:25
+# Translates to 18:16 and 24:22
+ENCODER_1_PINS = (18, 16)
+ENCODER_2_PINS = (24, 22)
 
 
 class EncoderTracker:
