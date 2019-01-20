@@ -12,6 +12,16 @@ from MotorShield import PiMotor as pimotor
 
 GPIO.setmode(GPIO.BOARD)
 
+# setup LED pins
+left_pin = 33
+right_pin = 35
+up_pin = 36
+down_pin = 37
+GPIO.setup(left_pin, GPIO.OUT)
+GPIO.setup(right_pin, GPIO.OUT)
+GPIO.setup(up_pin, GPIO.OUT)
+GPIO.setup(down_pin, GPIO.OUT)
+
 # Bounds for radius, in mm
 RADIUS_MIN = 5.0
 RADIUS_MAX = 500.0
@@ -327,6 +337,21 @@ def main():
 
     # Go for it, dude
     # machine.execute(plan)
+
+    # LED setting
+
+
+    # TODO DELETE THESE FOR TESTING
+    moving_left = True
+    moving_right = False
+    moving_up = True
+    moving_down = False
+
+    GPIO.output(left_pin, moving_left)
+    GPIO.output(right_pin, moving_right)
+    GPIO.output(up_pin, moving_up)
+    GPIO.output(down_pin, moving_down)
+
 
 if __name__ == '__main__':
     err = None
