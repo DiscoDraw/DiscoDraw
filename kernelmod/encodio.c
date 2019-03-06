@@ -15,8 +15,8 @@ MODULE_LICENSE("GPL");
 #define ENC2 2
 
 /* State manipulation */
-static i32 enc1_position = 0;
-static i32 enc2_position = 0;
+static int enc1_position = 0;
+static int enc2_position = 0;
 
 /* GPIO Initialization */
 void enc_gpio_init(void){
@@ -53,7 +53,7 @@ void enc_gpio_exit(void){
 static struct kobject *enc_kobject;
 
 static ssize_t get_enc(struct kobject *kobj, struct kobj_attribute *attr, char *buffer) {
-    return scnprintf(buffer, 4096, "%d %d", enc1, enc2);
+    return scnprintf(buffer, 4096, "%d %d", enc1_position, enc2_position);
 }
 
 static struct kobj_attribute enc_attribute =__ATTR(dot, (S_IWUSR | S_IRUGO), get_enc, NULL);
